@@ -1,10 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'Applocations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import 'Applocations.dart';
+import 'language_selector.dart'; // Importa la página del selector de idioma
 
 void main() {
   runApp(MyApp());
+}
+
+class LanguageController {
+  static Locale locale = Locale('en');
+
+  static void loadLanguage() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedLanguage = prefs.getString('language');
+    if (savedLanguage != null) {
+      locale = Locale(savedLanguage);
+    }
+  }
+
+  static Future<void> setLanguage(String languageCode) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('language', languageCode);
+    locale = Locale(languageCode);
+  }
 }
 
 class MyApp extends StatefulWidget {
@@ -13,37 +33,21 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  late Locale _locale =
-      Locale('en'); // Inicializamos con el idioma predeterminado
-
   @override
   void initState() {
     super.initState();
-    _loadLocale();
-  }
-
-  void _loadLocale() async {
-    final prefs = await SharedPreferences.getInstance();
-    final savedLanguage = prefs.getString('language');
-    if (savedLanguage != null) {
-      setState(() {
-        _locale = Locale(savedLanguage);
-      });
-    }
+    LanguageController.loadLanguage();
   }
 
   void _changeLanguage(String languageCode) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('language', languageCode);
-    setState(() {
-      _locale = Locale(languageCode);
-    });
+    await LanguageController.setLanguage(languageCode);
+    setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      locale: _locale,
+      locale: LanguageController.locale,
       supportedLocales: [
         Locale('en'),
         Locale('es'),
@@ -54,6 +58,14 @@ class _MyAppState extends State<MyApp> {
         GlobalWidgetsLocalizations.delegate,
       ],
       home: AppLang(_changeLanguage),
+      routes: {
+        '/language_selector': (context) => LanguageSelectorPage(
+              (languageCode) {
+                _changeLanguage(languageCode);
+                //Navigator.pop(context);
+              },
+            ),
+      },
     );
   }
 }
@@ -74,21 +86,11 @@ class AppLang extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(AppLocalizations.of(context)!.translate('message')!),
-            DropdownButton<String>(
-              value: Localizations.localeOf(context).languageCode,
-              onChanged: (value) {
-                onLanguageChanged(value!);
+            TextButton(
+              child: Text(AppLocalizations.of(context)!.translate('bien')!),
+              onPressed: () {
+                Navigator.pushNamed(context, '/language_selector');
               },
-              items: [
-                DropdownMenuItem(
-                  value: 'en',
-                  child: Text('English'),
-                ),
-                DropdownMenuItem(
-                  value: 'es',
-                  child: Text('Español'),
-                ),
-              ],
             ),
           ],
         ),
